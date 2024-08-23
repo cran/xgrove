@@ -1,11 +1,11 @@
 utils::globalVariables(c("left")) # resolves note on 'no visible binding for global variable 'left'' in group_by() in ln.123.
-
 #' @importFrom gbm gbm
 #' @importFrom gbm pretty.gbm.tree
 #' @importFrom dplyr group_by
 #' @importFrom dplyr summarise
 #' @importFrom stats cor
 #' @importFrom stats predict
+#' @importFrom stats terms
 #' @importFrom rpart rpart
 #' @importFrom rpart rpart.control
 #' @importFrom rpart.plot rpart.plot
@@ -16,12 +16,20 @@ utils::globalVariables(c("left")) # resolves note on 'no visible binding for glo
 #'
 #' @details A surrogate grove is trained via gradient boosting using \code{\link[gbm]{gbm}} on \code{data} with the predictions of using of the \code{model} as target variable.
 #' Note that \code{data} must not contain the original target variable! The boosting model is trained using stumps of depth 1.
-#' The resulting interpretation is extracted from \code{\link[gbm]{pretty.gbm.tree}}.
+#' The resulting interpretation is extracted from \code{\link[gbm]{pretty.gbm.tree}}. 
+#' The column \code{upper_bound_left} of the \code{rules} and the \code{groves} value of the output object contains 
+#' the split point for numeric variables denoting the uppoer bound of the left branch. Correspondingly, the 
+#' \code{levels_left} column contains the levels of factor variables assigned to the left branch. 
+#' The rule weights of the branches are given in the rightmost columns. The prediction of the grove is 
+#' obtained as the sum of the assigned weights over all rows.       
+#' Note that the training data must not contain the target variable. It can be either removed manually or will be removed automatically from \code{data} 
+#' if the argument \code{remove.target == TRUE}.    
 #'
 #' @param model   A model with corresponding predict function that returns numeric values.
-#' @param data    Data that must not (!) contain the target variable.
+#' @param data    Training data.
 #' @param ntrees  Sequence of integers: number of boosting trees for rule extraction.
 #' @param pfun    Optional predict function \code{function(model, data)} returning a real number. Default is the \code{predict()} method of the \code{model}.
+#' @param remove.target Logical. If \code{TRUE} the name of the target variable is identified from \code{terms(model)} and automatically removed if this variable is still in \code{data}.   
 #' @param shrink  Sets the \code{shrinkage} argument for the internal call of \code{\link[gbm]{gbm}}. As the \code{model} usually has a deterministic response 
 #' the default is 1 different to the default of \code{\link[gbm]{gbm}} applied train a model based on data.
 #' @param b.frac  Sets the \code{bag.fraction} argument for the internal call of \code{\link[gbm]{gbm}}. As the \code{model} usually has a deterministic response 
@@ -31,7 +39,7 @@ utils::globalVariables(c("left")) # resolves note on 'no visible binding for glo
 #'
 #' @return List of the results:
 #' @return \item{explanation}{Matrix containing tree sizes, rules, explainability \eqn{{\Upsilon}} and the correlation between the predictions of the explanation and the true model.}
-#' @return \item{rules}{Summary of the explanation grove: Rules with identical splits are aggegated. For numeric variables any splits are merge if they lead to identical parititions of the training data}
+#' @return \item{rules}{Summary of the explanation grove: Rules with identical splits are aggegated. For numeric variables any splits are merged if they lead to identical parititions of the training data.}
 #' @return \item{groves}{Rules of the explanation grove.}
 #' @return \item{model}{\code{gbm} model.}
 #'
@@ -48,6 +56,19 @@ utils::globalVariables(c("left")) # resolves note on 'no visible binding for glo
 #' xg <- xgrove(rf, data, ntrees)
 #' xg
 #' plot(xg)
+#' 
+#' # Example of a classification problem using the iris data.
+#' # A predict function has to be defined, here for the posterior probabilities of the class Virginica.  
+#' data(iris)
+#' set.seed(42)
+#' rf    <- randomForest(Species ~ ., data = iris)
+#' data  <- iris[,-5] # remove target variable
+#' 
+#' pf <- function(model, data){
+#'   predict(model, data, type = "prob")[,3]
+#'   }
+#'   
+#' xgrove(rf, data, pfun = pf)
 #'
 #' @author \email{gero.szepannek@@web.de}
 #'
@@ -59,7 +80,24 @@ utils::globalVariables(c("left")) # resolves note on 'no visible binding for glo
 #'   }
 #'
 #' @rdname xgrove
-xgrove <- function(model, data, ntrees = c(4,8,16,32,64,128), pfun = NULL, shrink = 1, b.frac = 1, seed = 42, ...){
+xgrove <- function(model, data, ntrees = c(4,8,16,32,64,128), pfun = NULL, remove.target = T, shrink = 1, b.frac = 1, seed = 42, ...){
+  
+  if(remove.target){
+    # adapted from: https://stackoverflow.com/questions/13217322/how-to-reliably-get-dependent-variable-name-from-formula-object
+    getResponse <- function(trms) {
+      vars <- as.character(attr(trms, "variables"))[-1] ## [1] is the list call
+      response <- attr(trms, "response") # index of response var
+      vars[response] 
+    }
+    
+    respname  <- getResponse(terms(model))
+    whichresp <- colnames(data) == respname
+    if (any(whichresp)){
+      whichresp <- which(whichresp)
+      message(paste("Response variable", colnames(data)[whichresp], "has been removed from data."))
+      data <- data[,-whichresp]
+    }
+  }
   
   set.seed(seed)
   if(is.null(pfun)) {
@@ -73,7 +111,7 @@ xgrove <- function(model, data, ntrees = c(4,8,16,32,64,128), pfun = NULL, shrin
 
   # compute surrogate grove for specified maximal number of trees
   data$surrogatetarget <- surrogatetarget
-  surrogate_grove <- gbm::gbm(surrogatetarget ~., data = data, n.trees = max(ntrees), shrinkage = shrink, bag.fraction = b.frac, ...)
+  surrogate_grove <- gbm::gbm(surrogatetarget ~., data = data, distribution = "gaussian", n.trees = max(ntrees), shrinkage = shrink, bag.fraction = b.frac, ...)
   if(surrogate_grove$interaction.depth > 1) stop("gbm interaction.depth is supposed to be 1. Please do not specify it differently within the ... argument.")
 
   # extract groves of different size and compute performance
@@ -161,6 +199,9 @@ xgrove <- function(model, data, ntrees = c(4,8,16,32,64,128), pfun = NULL, shrin
     df       <- rbind(df0, df)
     df_small <- rbind(df0, df_small)
 
+    # for better 
+    colnames(df) <- colnames(df_small) <- c("variable", "upper_bound_left", "levels_left", "pleft", "pright")
+    
     groves[[length(groves)+1]] <- df
     interpretation[[length(interpretation)+1]]   <- df_small
     explanation <- rbind(explanation, c(trees, rules, upsilon, rho))
