@@ -1,7 +1,7 @@
 Package: xgrove
 Title: Explanation Groves
-Version: 0.1-12
-Date: 2024-09-14
+Version: 0.1-13
+Date: 2024-09-15
 Maintainer: Gero Szepannek <gero.szepannek@web.de>
 Authors@R: person(given = "Gero",
                   family = "Szepannek",
@@ -17,7 +17,7 @@ Suggests: pdp, randomForest
 RoxygenNote: 7.3.2
 Config/testthat/edition: 3
 NeedsCompilation: no
-Packaged: 2024-09-14 18:55:44 UTC; szepannek
+Packaged: 2024-09-15 17:34:49 UTC; szepannek
 Author: Gero Szepannek [aut, cre] (<https://orcid.org/0000-0001-8456-1283>)
 Repository: CRAN
-Date/Publication: 2024-09-15 09:40:02 UTC
+Date/Publication: 2024-09-22 18:00:02 UTC
