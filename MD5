@@ -1,11 +1,11 @@
-206a3df87e9327d40c2893b038bda49b *DESCRIPTION
-d75a56f9e156a34007c4492923b91b9b *NAMESPACE
-fea6170f9826381a4d3f075c724d8da4 *NEWS
-4c5408ac3a5b07f57ed5e74bce3628db *R/xgrove.R
+a2e602bf635b2c25877230a2a5d92357 *DESCRIPTION
+fcc727e0a60ca64dbe85d6b217d72fb1 *NAMESPACE
+44e00e951b5812688c85d73ddcdda379 *NEWS
+c87c95f7a14aeff173bd883f20981489 *R/xgrove.R
 2f88d929f679dfc9a304fe7c79a11685 *README.md
 b39bc544cea2cf944e83a02bdae10ef0 *man/figures/logo.png
 88efd8a146c883362f87ce1160be8826 *man/plot.sgtree.Rd
-2cd19df697280d27778dbbecb26a0bdd *man/plot.xgrove.Rd
+38cd9b2f99ddf496a3d0b1df1506af89 *man/plot.xgrove.Rd
 e72174ac3ec1c02fa6968cdb41e8d9a6 *man/sgtree.Rd
 1c38981f112f7ab09d7f0b53a1896e07 *man/upsilon.Rd
 8eba4caa5d177b0d59f4eb7bb91bfa31 *man/xgrove.Rd
